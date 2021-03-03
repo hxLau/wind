@@ -280,7 +280,8 @@ def runTask(day=0, hour=0, min=1, second=0):
 
             # 结束计时，并打印使用时间
             time_end = time.time()
-            print('time cost', time_end - time_start, 's')
+            if market_open:
+                print('time cost', time_end - time_start, 's')
 
             # 生成下一执行时间
             iter_time = iter_now + period
