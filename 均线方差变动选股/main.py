@@ -6,7 +6,14 @@ import os
 import easygui as eg
 import re
 
-# 判断字符串是否为数字
+
+def list2dic(key, value):
+    dic = {}
+    for i in range(len(key)):
+        dic[key[i]] = value[i]
+    return dic
+
+
 def is_number(num):
   pattern = re.compile(r'^[-+]?[-0-9]\d*\.\d*|[-+]?\.?[0-9]\d*$')
   result = pattern.match(num)
@@ -33,14 +40,14 @@ def get_qihuo_data(w, codes, beginTime):
     if l_today[-4:] == '0229':
         l_today = year + '0228'
     days = w.tdayscount(l_today, today, "").Data[0][0]
-    print(days)
+    # print(days)
 
     history_data = w.wsd(codes=codes, fields="close", beginTime=beginTime, options="returnType=1;PriceAdj=F",
                          usedf=True)
 
     df = history_data[1].iloc[::-1]
     if df['CLOSE'][0]==None:
-        print('it is None')
+        # print('it is None')
         return df, True
     # 抽取日期列表
     date_list = list(df[:days].index)
@@ -78,7 +85,7 @@ def get_Agu_data(w, codes, beginTime):
     if l_today[-4:] == '0229':
         l_today = year + '0228'
     days = w.tdayscount(l_today, today, "").Data[0][0]
-    print(days)
+    # print(days)
 
     history_data = w.wsd(codes=codes, fields="close", beginTime=beginTime, options="returnType=1;PriceAdj=F",
                          usedf=True)
@@ -138,7 +145,7 @@ def get_qihuo_file():
 
     qihuo_list = get_qihuo(w, begin, today)
     for i in range(len(qihuo_list)):
-        print(qihuo_list[i])
+        # print(qihuo_list[i])
         df, errorcode = get_qihuo_data(w, qihuo_list[i], begin)
         if errorcode:
             continue
@@ -154,7 +161,7 @@ def get_Agu_file():
 
     Agu_list = get_Agu(w, begin, today)
     for i in range(len(Agu_list)):
-        print(Agu_list[i])
+        # print(Agu_list[i])
         df, errorcode = get_Agu_data(w, Agu_list[i], begin)
         if errorcode:
             continue
@@ -163,6 +170,7 @@ def get_Agu_file():
 
 # 获取期货和A股数据
 def get_data():
+    print('正在下载和分析数据')
     get_qihuo_file()
     get_Agu_file()
 
@@ -181,7 +189,7 @@ def choose_data(mypath = './data/qihuo/', percent=0.05):
         max_var = max(var_array)
         now_value = var_array[0]
         if now_value < percent*max_var:
-            choose_stock.append(file_list[i])
+            choose_stock.append(file_list[i][:-4])
     return choose_stock
 
 
@@ -201,7 +209,7 @@ def set_percent():
         for i in range(len(fieldNames)):
             if fieldValues[i].strip() == "" or not is_number(fieldValues[i]):
                 errmsg += ('只能设置为数字且不能为空，如0.05')
-            if float(fieldValues[i])>=1 or fieldValues<=0:
+            if float(fieldValues[i])>=1 or float(fieldValues[i])<=0:
                 errmsg += ('设定范围在0到1（不包括0和1）')
 
         # 无报错提示，退出程序，否则，报错提示，重新进入输入界面
@@ -214,14 +222,43 @@ def set_percent():
 
 
 def main():
-    # get_data()
+    # 设定阈值
     percent = set_percent()
-    mypath = './data/qihuo/'
-    choose_stock = choose_data(mypath, percent)
-    msg = '选中的股票有：\n'
-    for i in range(len(choose_stock)):
-        msg += '代码: ' + choose_stock[i] + '\n'
+
+    # 读取数据，存储为csv文件
+    # get_data()
+
+
+    # 读取股票的代码和名字，生成对应字典
+    A = np.load('info.npz')
+    code_A = list(A['a_code'])
+    name_A = list(A['a_name'])
+    code_Q = list(A['qihuo_code'])
+    name_Q = list(A['qihuo_name'])
+
+    A_C2N = list2dic(code_A, name_A)
+    Q_C2N = list2dic(code_Q, name_Q)
+
+    A_path = './data/Agu/'
+    Q_path = './data/qihuo/'
+    choose_A = choose_data(A_path, percent)
+    msg = 'A股选中的股票有：\n'
+    for i in range(len(choose_A)):
+        msg += A_C2N[choose_A[i]] + '  代码: ' + choose_A[i] + '\n'
     print(msg)
+
+    today = datetime.today().strftime("%Y%m%d")
+    with open('log/' + today + " A股.txt", "w") as f:
+        f.write(msg + '\n')
+
+    choose_Q = choose_data(Q_path, percent)
+    msg = '选中的期货有：\n'
+    for i in range(len(choose_Q)):
+        msg += Q_C2N[choose_Q[i]] + '  代码: ' + choose_Q[i] + '\n'
+    print(msg)
+
+    with open('log/' + today + " 期货.txt", "w") as f:
+        f.write(msg + '\n')
 
 
 if __name__ == '__main__':
