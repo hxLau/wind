@@ -2,6 +2,18 @@ from WindPy import w
 import numpy as np
 import pandas as pd
 from datetime import datetime
+import os
+import easygui as eg
+import re
+
+# 判断字符串是否为数字
+def is_number(num):
+  pattern = re.compile(r'^[-+]?[-0-9]\d*\.\d*|[-+]?\.?[0-9]\d*$')
+  result = pattern.match(num)
+  if result:
+    return True
+  else:
+    return False
 
 
 # 计算MA值
@@ -149,9 +161,67 @@ def get_Agu_file():
         df.to_csv('./data/Agu/' + Agu_list[i] +'.csv', index=False)
 
 
-def main():
-    # get_qihuo_file()
+# 获取期货和A股数据
+def get_data():
+    get_qihuo_file()
     get_Agu_file()
+
+
+# 选择符合条件的股票
+def choose_data(mypath = './data/qihuo/', percent=0.05):
+    choose_stock = []
+
+    file_list = [f for f in os.listdir(mypath) if os.path.isfile(os.path.join(mypath, f))]
+    # print(file_list)
+
+    for i in range(len(file_list)):
+        file_path = mypath + file_list[i]
+        df = pd.read_csv(file_path)
+        var_array = df['VAR'].values
+        max_var = max(var_array)
+        now_value = var_array[0]
+        if now_value < percent*max_var:
+            choose_stock.append(file_list[i])
+    return choose_stock
+
+
+# 设置阈值
+def set_percent():
+    msg = "请设定阈值（默认为0.05），设定范围在0到1（不包括0和1）"
+    title = "设定阈值"
+    fieldNames = ["阈值设定："]
+    fieldValues = eg.multenterbox(msg, title, fieldNames)
+
+    while True:
+        # 点击取消按钮操作
+        if fieldValues == None:
+            break
+        # 报错提示初始值
+        errmsg = ""
+        for i in range(len(fieldNames)):
+            if fieldValues[i].strip() == "" or not is_number(fieldValues[i]):
+                errmsg += ('只能设置为数字且不能为空，如0.05')
+            if float(fieldValues[i])>=1 or fieldValues<=0:
+                errmsg += ('设定范围在0到1（不包括0和1）')
+
+        # 无报错提示，退出程序，否则，报错提示，重新进入输入界面
+        if errmsg == "":
+            break
+        fieldValues = eg.multenterbox(errmsg, title, fieldNames, fieldValues)
+
+    print("阈值设定为: " + str(float(fieldValues[0])))
+    return float(fieldValues[0])
+
+
+def main():
+    # get_data()
+    percent = set_percent()
+    mypath = './data/qihuo/'
+    choose_stock = choose_data(mypath, percent)
+    msg = '选中的股票有：\n'
+    for i in range(len(choose_stock)):
+        msg += '代码: ' + choose_stock[i] + '\n'
+    print(msg)
 
 
 if __name__ == '__main__':
