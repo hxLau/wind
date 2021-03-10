@@ -6,13 +6,25 @@ import time
 import threading
 import ctypes
 import warnings
+import re
+import easygui as eg
 
 
 def info(title='提示', msg='内容'):
-    duration = 2000  # millisecond
-    freq = 440  # Hz
-    winsound.Beep(freq, duration)
+    # duration = 2000  # millisecond
+    # freq = 440  # Hz
+    # winsound.Beep(freq, duration)
+    winsound.PlaySound('ding.wav', winsound.SND_ALIAS)
     msgshow(title, msg)
+
+
+def is_number(num):
+  pattern = re.compile(r'^[-+]?[-0-9]\d*\.\d*|[-+]?\.?[0-9]\d*$')
+  result = pattern.match(num)
+  if result:
+    return True
+  else:
+    return False
 
 
 def msgshow(title='标题', msg='内容'):
@@ -37,8 +49,42 @@ def list2dic(key, value):
     return dic
 
 
+def set_par():
+    msg = "请设定参数"
+    title = "设定参数"
+    fieldNames = ["涨幅差值设定（可选0-1，不包括0和1，例如0.04）:", "AB涨幅比较多少天前(输入要求整数，如30):"]
+    fieldValues = eg.multenterbox(msg, title, fieldNames)
+
+    while True:
+        # 点击取消按钮操作
+        if fieldValues == None:
+            break
+        # 报错提示初始值
+        errmsg = ""
+        if fieldValues[0].strip() == "" or not is_number(fieldValues[0]):
+            errmsg += ('涨幅差值设定，只能设置为数字且不能为空\n')
+        elif float(fieldValues[0])>=1 or float(fieldValues[0])<=0:
+            errmsg += ('涨幅差值设定，设定范围在0到1（不包括0和1）\n')
+
+        if fieldValues[1].strip() == "" or not fieldValues[1].isdigit():
+            errmsg += ('比较天数设定，只能设置为整数且不能为空\n')
+        elif float(fieldValues[1])<=0:
+            errmsg += ('比较天数设定，设定要大于0\n')
+
+        # 无报错提示，退出程序，否则，报错提示，重新进入输入界面
+        if errmsg == "":
+            break
+        fieldValues = eg.multenterbox(errmsg, title, fieldNames, fieldValues)
+
+    print("涨幅差值设定为: " + str(float(fieldValues[0])))
+    print("天数设定为: " + str(int(fieldValues[1])))
+    return float(fieldValues[0]), int(fieldValues[1])
+
+
 def runTask(day=0, hour=0, min=1, second=0):
+    chazhi, compare_day = set_par()
     # 链接wind
+    print("正在连接wind金融终端---------------------")
     WindPy.w.start()
     WindPy.w.isconnected()
 
@@ -101,7 +147,7 @@ def runTask(day=0, hour=0, min=1, second=0):
             last_trade_date = WindPy.w.tdays(last_10_date).Times[-2].strftime("%Y%m%d")
 
             # 获取前三十天的日期
-            last_d30 = WindPy.w.tdaysoffset(-22, today.isoformat(), "Period=D;Days=Alldays")
+            last_d30 = WindPy.w.tdaysoffset(-compare_day, today.isoformat(), "Period=D;Days=Alldays")
             last_30_date = last_d30.Times[0].strftime("%Y%m%d")
             last_30_trade_date = WindPy.w.tdays(last_30_date).Times[0].strftime("%Y%m%d")
 
@@ -225,12 +271,12 @@ def runTask(day=0, hour=0, min=1, second=0):
 
                             # 判断A股是否涨幅比B股大30%以上
                             if code_A[i] in AcB:
-                                if percentA >= 1.30 * percentB:
+                                if percentA >= (1.0 + chazhi) * percentB:
                                     continue
                                 else:
                                     AcB.remove(code_A[i])
                             else:
-                                if percentA >= 1.30 * percentB:
+                                if percentA >= (1.0 + chazhi) * percentB:
                                     # print(stock_name[i] + ' ' + str(percentA) + ' ' + str(percentB))
                                     AcB_stock.append(code_A[i])
                                     AcB.append(code_A[i])
@@ -288,6 +334,7 @@ def runTask(day=0, hour=0, min=1, second=0):
             strnext_time = iter_time.strftime('%Y-%m-%d %H:%M:%S')
             # 继续循环，等待下一执行时间
             continue
+
 
 
 if __name__ == '__main__':
