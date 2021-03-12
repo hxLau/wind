@@ -52,7 +52,7 @@ def list2dic(key, value):
 def set_par():
     msg = "请设定参数"
     title = "设定参数"
-    fieldNames = ["涨幅差值设定（可选0-1，不包括0和1，例如0.04）:", "AB涨幅比较多少天前(输入要求整数，如30):"]
+    fieldNames = ["涨幅差值设定(单位%)（大于0，例如5）:", "AB涨幅比较多少天前(输入要求整数，如30):"]
     fieldValues = eg.multenterbox(msg, title, fieldNames)
 
     while True:
@@ -62,9 +62,9 @@ def set_par():
         # 报错提示初始值
         errmsg = ""
         if fieldValues[0].strip() == "" or not is_number(fieldValues[0]):
-            errmsg += ('涨幅差值设定，只能设置为数字且不能为空\n')
-        elif float(fieldValues[0])>=1 or float(fieldValues[0])<=0:
-            errmsg += ('涨幅差值设定，设定范围在0到1（不包括0和1）\n')
+            errmsg += ('涨幅差值设定(单位%)，只能设置为数字且不能为空\n')
+        elif float(fieldValues[0]) <= 0:
+            errmsg += ('涨幅差值设定，设定要大于0\n')
 
         if fieldValues[1].strip() == "" or not fieldValues[1].isdigit():
             errmsg += ('比较天数设定，只能设置为整数且不能为空\n')
@@ -76,7 +76,7 @@ def set_par():
             break
         fieldValues = eg.multenterbox(errmsg, title, fieldNames, fieldValues)
 
-    print("涨幅差值设定为: " + str(float(fieldValues[0])))
+    print("涨幅差值设定为: " + str(float(fieldValues[0])) + '%')
     print("天数设定为: " + str(int(fieldValues[1])))
     return float(fieldValues[0]), int(fieldValues[1])
 
@@ -84,7 +84,7 @@ def set_par():
 def runTask(day=0, hour=0, min=1, second=0):
     chazhi, compare_day = set_par()
     # 链接wind
-    print("正在连接wind金融终端---------------------")
+    print("正在连接wind金融终端------------------------------------------")
     WindPy.w.start()
     WindPy.w.isconnected()
 
@@ -115,7 +115,7 @@ def runTask(day=0, hour=0, min=1, second=0):
     next_time = now + period
     strnext_time = next_time.strftime('%Y-%m-%d %H:%M:%S')
     market_open = True
-
+    tip_bool = True
     # 循环运行
     while True:
         # 获得当前的系统时间
@@ -133,6 +133,7 @@ def runTask(day=0, hour=0, min=1, second=0):
             # 存储选中的股票
             choose_stock = []
             AcB_stock = []
+            zhangfu_list = []
 
             # 创建存储A和B股最新价格的字典，初始化所有价格为-1，用于后面判断是否有股票没有价格
             neglist = [-1] * len(code_A)
@@ -150,6 +151,10 @@ def runTask(day=0, hour=0, min=1, second=0):
             last_d30 = WindPy.w.tdaysoffset(-compare_day, today.isoformat(), "Period=D;Days=Alldays")
             last_30_date = last_d30.Times[0].strftime("%Y%m%d")
             last_30_trade_date = WindPy.w.tdays(last_30_date).Times[0].strftime("%Y%m%d")
+            if tip_bool:
+                print('---------------------------------------------------------')
+                print(str(compare_day) + '天前的交易日是' + last_30_trade_date)
+                tip_bool=False
 
             # 计算出今天是星期几，是否为交易日
             weekday = today.weekday()
@@ -175,7 +180,6 @@ def runTask(day=0, hour=0, min=1, second=0):
                 #if True:
                     print('---------------------------------------------------------')
                     print('现在是' + todaystr)
-                    print('在开市时间之中')
 
                     market_open = True
 
@@ -233,10 +237,7 @@ def runTask(day=0, hour=0, min=1, second=0):
                             now_price_B = B2P[code_B[i]]
                             item_price = last_cprice[i][0]
 
-                            # 打印各股票信息
-                            #print(
-                            #    str(i + 1) + '  ' + stock_name[i] + '  ' + code_A[i] + '  ' + str(now_price_A) + '   ' +
-                            #    str(item_price) + '  ' + code_B[i] + '  ' + str(now_price_B))
+
 
                             if now_price_A != now_price_A:
                                 continue
@@ -265,21 +266,31 @@ def runTask(day=0, hour=0, min=1, second=0):
                                 #print(stock_name[i] + ' ' + code_B[i] + '没有B股数据')
                                 continue
 
-                            # 计算A和B分别与三十个工作日前的价格的百分比变化
+                            # 计算A和B分别与5个工作日前的价格的百分比变化
                             percentA = (now_price_A / last_30_price_A[i][0]) - 1
                             percentB = (now_price_B / last_30_price_B[i][0]) - 1
 
                             # 判断A股是否涨幅比B股大30%以上
                             if code_A[i] in AcB:
-                                if percentA >= (1.0 + chazhi) * percentB:
+                                if (percentA -percentB) > chazhi/100 and percentA > 0 and percentB > 0:
                                     continue
                                 else:
                                     AcB.remove(code_A[i])
                             else:
-                                if percentA >= (1.0 + chazhi) * percentB:
+                                if (percentA -percentB) > chazhi/100 and percentA > 0 and percentB > 0:
                                     # print(stock_name[i] + ' ' + str(percentA) + ' ' + str(percentB))
                                     AcB_stock.append(code_A[i])
                                     AcB.append(code_A[i])
+                                    zhangfu_list.append(str((percentA-percentB)*100)[:5] + '%')
+                                    # 打印各股票信息
+                                    '''
+                                    print(
+                                        str(i + 1) + '  ' + stock_name[i] + '  ' + code_A[i] + '  ' + str(
+                                           now_price_A) + '   '
+                                        + str(last_30_price_A[i][0]) + '   ' +
+                                        '  ' + code_B[i] + '  ' + str(now_price_B) + '   '
+                                        + str(last_30_price_B[i][0]))
+                                    '''
 
                         # 判断是否有停涨的股票
                         if len(choose_stock) != 0:
@@ -300,20 +311,20 @@ def runTask(day=0, hour=0, min=1, second=0):
 
                         # 判断是否有涨幅超30%的股票
                         if len(AcB_stock) != 0:
-                            msg = todaystr + ' 涨幅大于30%选中的股票有:\n'
+                            msg = todaystr + ' 涨幅差值大于' + str(chazhi) +'%选中的股票有:\n'
                             for i in range(len(AcB_stock)):
                                 itemstr = A2N[AcB_stock[i]] + '  A股代码: ' + AcB_stock[i] \
-                                          + '  B股代码: ' + A2B[AcB_stock[i]] + '\n'
+                                          + '  B股代码: ' + A2B[AcB_stock[i]] + ' 涨幅差值: ' + zhangfu_list[i] + '\n'
                                 msg = msg + itemstr
                             print(msg)
 
                             # 告警
-                            info(title='A股比B股涨幅大于30%告警', msg=msg)
+                            info(title='A股比B股涨幅差值大于' + str(chazhi) + '%告警', msg=msg)
 
-                            with open('log/' + today.strftime("%Y-%m-%d") + " 涨幅30%.txt", "a") as f:
+                            with open('log/' + today.strftime("%Y-%m-%d") + " 涨幅.txt", "a") as f:
                                 f.write(msg + '\n')
                         else:
-                            print(todaystr + ' 涨幅大于30%没有选中股票')
+                            print(todaystr + ' 涨幅差值大于' + str(chazhi) + '%没有选中股票')
                 else:
                     if market_open:
                         print('---------------------------------------------------------')
