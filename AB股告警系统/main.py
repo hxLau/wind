@@ -83,6 +83,9 @@ def set_par():
 
 def runTask(day=0, hour=0, min=1, second=0):
     chazhi, compare_day = set_par()
+    with open('./set.txt', "w") as f:
+        f.write(str(chazhi) + ' ' + str(compare_day))
+
     # 链接wind
     print("正在连接wind金融终端------------------------------------------")
     WindPy.w.start()
@@ -139,6 +142,13 @@ def runTask(day=0, hour=0, min=1, second=0):
             neglist = [-1] * len(code_A)
             A2P = list2dic(code_A, neglist)
             B2P = list2dic(code_B, neglist)
+
+            # 读取参数
+            with open('./set.txt', "r") as f:
+                s = f.read()
+                para = s.split()
+                chazhi = float(para[0])
+                compare_day = int(para[1])
 
             # 获取前十天的日期，找出上一个交易日
             today = datetime.datetime.today()
@@ -311,7 +321,7 @@ def runTask(day=0, hour=0, min=1, second=0):
 
                         # 判断是否有涨幅超30%的股票
                         if len(AcB_stock) != 0:
-                            msg = todaystr + ' 涨幅差值大于' + str(chazhi) +'%选中的股票有:\n'
+                            msg = todaystr + ' 涨幅差值大于' + str(chazhi) +'%选中的股票有(' + str(compare_day) + '天前):\n'
                             for i in range(len(AcB_stock)):
                                 itemstr = A2N[AcB_stock[i]] + '  A股代码: ' + AcB_stock[i] \
                                           + '  B股代码: ' + A2B[AcB_stock[i]] + ' 涨幅差值: ' + zhangfu_list[i] + '\n'
@@ -324,7 +334,7 @@ def runTask(day=0, hour=0, min=1, second=0):
                             with open('log/' + today.strftime("%Y-%m-%d") + " 涨幅.txt", "a") as f:
                                 f.write(msg + '\n')
                         else:
-                            print(todaystr + ' 涨幅差值大于' + str(chazhi) + '%没有选中股票')
+                            print(todaystr + ' 涨幅差值大于' + str(chazhi) + '%没有选中股票(' + str(compare_day) + '天前)')
                 else:
                     if market_open:
                         print('---------------------------------------------------------')
@@ -347,9 +357,10 @@ def runTask(day=0, hour=0, min=1, second=0):
             continue
 
 
-
 if __name__ == '__main__':
     warnings.filterwarnings("ignore")
     runTask()
+
+
 
 
