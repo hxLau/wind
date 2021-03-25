@@ -91,21 +91,13 @@ def runTask(day=0, hour=0, min=1, second=0):
                     zc_commodity = []
                     marketopen_tip = False
             else:
-                # 获取上一分钟的时间
-                last_min_date = today + datetime.timedelta(minutes=-1)
-                hour = today.strftime("%Y-%m-%d %H:%M:%S")[11:13]
-                minute = today.strftime("%Y-%m-%d %H:%M:%S")[14:16]
-                total_minutes = int(hour) * 60 + int(minute)
-
-                # 判断是否在工作日开市时间之中9:30-11:30 或 13:00-15:00,要改
                 if True:
-                # if (total_minutes > 570 and total_minutes < 690) or (total_minutes > 780 and total_minutes < 900):
                     print('---------------------------------------------------------')
                     print('现在是' + todaystr)
 
                     marketopen_tip = True
                     # 获取全部期货现在的分钟数据
-                    a = WindPy.w.wsq(commodity_code, "rt_last", usedf=True)[1]
+                    a = WindPy.w.wsq(commodity_code, "rt_last", usedf=True)
 
                     if len(list(a[1].index))==0:
                         print('返回数据错误')
@@ -114,7 +106,7 @@ def runTask(day=0, hour=0, min=1, second=0):
                         # 获取期货的代码和当前价格
                         wind_code = list(a[1].index)
 
-                        wind_price = list(a[1].values)
+                        wind_price = [a[1].values[i][0] for i in range(len(a[1].values))]
 
                         # 记录返回每个期货的价格到字典
                         for i in range(len(wind_price)):
@@ -141,8 +133,8 @@ def runTask(day=0, hour=0, min=1, second=0):
                                     if not judge:
                                         continue
 
-                                now_price = C2P[cls_code[i][j]][0]
-                                next_price = C2P[cls_code[i][j+1]][0]
+                                now_price = C2P[cls_code[i][j]]
+                                next_price = C2P[cls_code[i][j+1]]
 
                                 # 判断是否返回了数据
                                 if now_price == 0 or next_price == 0:
