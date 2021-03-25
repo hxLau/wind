@@ -22,6 +22,23 @@ def get_HK_stock(todaystr):
     return HK_code, HK_name
 
 
+# 获取全部泸股通或深股通代码
+def get_LS_stock(todaystr):
+    LGT_stock = WindPy.w.wset("sectorconstituent","date=" + todaystr + ";sectorid=1000014938000000")
+    LGT_code = LGT_stock.Data[1]
+    SGT_stock = WindPy.w.wset("sectorconstituent","date=" + todaystr + ";sectorid=1000023475000000")
+    SGT_code = SGT_stock.Data[1]
+    LS_code = LGT_code + SGT_code
+    return LS_code
+
+
+# 获取全部港股通代码
+def get_GGT_stock(todaystr):
+    GGT_stock = WindPy.w.wset("sectorconstituent","date=" + todaystr + ";sectorid=1000025142000000")
+    GGT_code = GGT_stock.Data[1]
+    return GGT_code
+
+
 # 获取MA或者区间日均交易额数据
 def get_data_by_wss(code, variable, para):
     result = []
@@ -55,6 +72,8 @@ def runTask(day=0, hour=0, min=1, second=0):
     # 加载股票数据信息
     A_code, A_name = get_A_stock(nowstr)
     HK_code, HK_name = get_HK_stock(nowstr)
+    LS_code = get_LS_stock(nowstr)
+    GGT_code = get_GGT_stock(nowstr)
 
     # 创建代码到名字的字典
     A2N = list2dic(A_code, A_name)
@@ -233,12 +252,16 @@ def runTask(day=0, hour=0, min=1, second=0):
 
                         # 判断A股是否有符合条件的股票
                         if len(A_choose_stock) != 0:
-                            msg = todaystr + ' A股符合条件放量大于' + str(H_volume/100) + "%，涨跌幅大于" \
-                                  + str(Q_change/100) + '%的股票有:\n'
+                            msg = todaystr + ' A股符合条件放量大于' + str(H_volume) + "%，涨跌幅大于" \
+                                  + str(Q_change) + '%的股票有:\n'
                             for i in range(len(A_choose_stock)):
                                 item_code = A_choose_stock[i]
                                 itemstr = item_code + ' ' + A2N[item_code] + '  放量: ' + A_choose_value[i][0] + \
-                                          '  涨跌幅: ' + A_choose_value[i][1] + ' \n'
+                                          '  涨跌幅: ' + A_choose_value[i][1] + '  '
+                                if item_code in LS_code:
+                                    itemstr = itemstr + '泸股通/深股通：是 \n'
+                                else:
+                                    itemstr = itemstr + '泸股通/深股通：否 \n'
                                 msg = msg + itemstr
                             print(msg)
 
@@ -252,12 +275,16 @@ def runTask(day=0, hour=0, min=1, second=0):
 
                         # 判断H股是否有符合条件的股票
                         if len(HK_choose_stock) != 0:
-                            msg = todaystr + ' H股符合条件放量大于' + str(H_volume/100) + "%，涨跌幅大于" \
-                                  + str(Q_change/100) + '%的股票有:\n'
+                            msg = todaystr + ' H股符合条件放量大于' + str(H_volume) + "%，涨跌幅大于" \
+                                  + str(Q_change) + '%的股票有:\n'
                             for i in range(len(HK_choose_stock)):
                                 item_code = HK_choose_stock[i]
                                 itemstr = item_code + ' ' + H2N[item_code] +  '  放量: ' + HK_choose_value[i][0] + \
-                                          '  涨跌幅: ' + HK_choose_value[i][1] + '\n'
+                                          '  涨跌幅: ' + HK_choose_value[i][1] + '  '
+                                if item_code in GGT_code:
+                                    itemstr = itemstr + '港股通：是 \n'
+                                else:
+                                    itemstr = itemstr + '港股通：否 \n'
                                 msg = msg + itemstr
                             print(msg)
 
