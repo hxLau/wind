@@ -150,7 +150,7 @@ def main():
         # 斜率公式要改
         c_k_cci.append(CCI[choose_stock[i]] - last_CCI[choose_stock[i]])
         c_cci.append(CCI[choose_stock[i]])
-        c_amt_ratio.append(AMT[choose_stock[i]] - last_AMT[choose_stock[i]])
+        c_amt_ratio.append(AMT[choose_stock[i]] / last_AMT[choose_stock[i]])
         c_kdj_j.append(KDJ_J[choose_stock[i]])
         c_rsi.append(RSI[choose_stock[i]])
         c_dif.append(DIF[choose_stock[i]])
